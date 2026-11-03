@@ -1,60 +1,74 @@
-// Language: Objective-C | File: Tweak.mm | Runtime: MobileSubstrate | Target: aovnet_MAPV1 (iOS ARM64)
-#import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import <objc/runtime.h>
-#include <substrate.h>
 
-static void (*orig_submitButtonTapped)(id, SEL);
-static void (*orig_Post_AppendURL)(id, SEL, id, id, id, id);
+// 1. Hook màn hình đăng nhập / nhập key để tự động bypass
+%hook LoginViewController // Thay thế tên Class màn hình nhập key nếu game của bạn có tên khác
 
-static void hk_submitButtonTapped(id self, SEL _cmd) {
-    if (orig_submitButtonTapped) {
-        orig_submitButtonTapped(self, _cmd);
+- (void)submitButtonTapped:(id)sender {
+    NSLog(@"[DEBUG] Đã can thiệp nút xác nhận key, tiến hành mở khóa trực tiếp.");
+    
+    // Gọi trực tiếp phương thức mở menu mod (Menucuatoi)
+    if ([self respondsToSelector:@selector(Menucuatoi)]) {
+        [self performSelector:@selector(Menucuatoi)];
     }
-
-    SEL menuSel = NSSelectorFromString(@"Menucuatoi");
-    if ([self respondsToSelector:menuSel]) {
-        NSMethodSignature *sig = [self methodSignatureForSelector:menuSel];
-        if (sig && sig.numberOfArguments == 2 && sig.methodReturnLength == 0) {
-            ((void (*)(id, SEL))[self methodForSelector:menuSel])(self, menuSel);
-        }
+    
+    // Ẩn giao diện nhập key đi để vào game
+    if ([self respondsToSelector:@selector(view)]) {
+        [[self view] setHidden:YES];
     }
 }
 
-static void hk_Post_AppendURL(id self, SEL _cmd, id url, id params, id success, id failure) {
-    NSString *u = [url isKindOfClass:[NSString class]] ? url : [url description];
-    BOOL isVipCheck = [u containsString:@"vip"] || [u containsString:@"user/info"] || [u containsString:@"check"];
+%end
 
-    if (isVipCheck && success) {
-        NSDictionary *fake = @{
-            @"status": @200, 
-            @"code": @0, 
+// 2. Hook tầng mạng để giả lập dữ liệu VIP / Key thành công từ Server
+%hook NetworkManager
+
+- (void)Post_AppendURL:(NSString *)url myparameters:(NSDictionary *)params mysuccess:(void(^)(id responseObject))success myfailure:(void(^)(NSError *error))failure {
+    // Lọc các đường dẫn request liên quan đến kiểm tra VIP hoặc thông tin tài khoản
+    if ([url containsString:@"vip"] || [url containsString:@"user/info"] || [url containsString:@"license"] || [url containsString:@"checkkey"]) {
+        NSLog(@"[DEBUG] Đã chặn endpoint mạng: %@, trả về dữ liệu VIP giả lập.", url);
+        
+        // Tạo gói dữ liệu JSON giả lập báo kích hoạt thành công vĩnh viễn
+        NSDictionary *fakeResponse = @{
+            @"status": @200,
+            @"code": @0,
             @"message": @"success",
             @"data": @{
-                @"isVip": @1,
-                @"expiredTime": @4102444800LL,
-                @"keyStatus": @"active"
+                @"is_vip": @1,
+                @"vip_level": @99,
+                @"active": @true,
+                @"expire_time": @"2099-01-01 00:00:00"
             }
         };
-        ((void (^)(id))success)(fake);
+        
+        if (success) {
+            success(fakeResponse);
+        }
         return;
     }
     
-    if (orig_Post_AppendURL) {
-        orig_Post_AppendURL(self, _cmd, url, params, success, failure);
-    }
+    // Các request mạng khác giữ nguyên luồng chạy bình thường
+    %orig(url, params, success, failure);
 }
 
-%ctor {
-    Class loginVC = objc_getClass("LoginViewController");
-    if (loginVC) {
-        MSHookMessageEx(loginVC, @selector(submitButtonTapped),
-                        (IMP)hk_submitButtonTapped, (IMP *)&orig_submitButtonTapped);
-    }
-    
-    Class netMgr = objc_getClass("NetworkManager");
-    if (netMgr) {
-        MSHookMessageEx(netMgr, @selector(Post_AppendURL:myparameters:mysuccess:myfailure:),
-                        (IMP)hk_Post_AppendURL, (IMP *)&orig_Post_AppendURL);
-    }
+%end
+
+// 3. Hook hệ thống để ẩn hoặc trả về UDID giả lập
+%hook UIDevice
+
+- (NSUUID *)identifierForVendor {
+    NSLog(@"[DEBUG] Chặn yêu cầu lấy UDID phần cứng, trả về UDID giả lập.");
+    return [[NSUUID alloc] initWithUUIDString:@"00000000-0000-0000-0000-000000000000"];
 }
+
+%end
+
+%hook NSUserDefaults
+
+- (id)objectForKey:(NSString *)defaultName {
+    if ([defaultName containsString:@"udid"] || [defaultName containsString:@"device_id"] || [defaultName containsString:@"uuid"]) {
+        return @"FakeUDID_Bypass_000000";
+    }
+    return %orig(defaultName);
+}
+
+%end
