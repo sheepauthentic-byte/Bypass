@@ -5,7 +5,7 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME := MapV1Bypass
 
-MapV1Bypass_FILES := Tweak.mm
+MapV1Bypass_FILES := Tweak.xm
 MapV1Bypass_CFLAGS := -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
