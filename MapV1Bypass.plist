@@ -1,7 +1,7 @@
 {
     Filter = {
         Bundles = (
-            "com.garena.game.kgvn"
+            "com.aovmap.game.kgvn"
         );
     };
 }
