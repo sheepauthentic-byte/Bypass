@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+_build:
     runs-on: macos-latest
 
     steps:
@@ -18,6 +18,11 @@ jobs:
         git clone --recursive https://github.com/theos/theos.git $HOME/theos
         echo "THEOS=$HOME/theos" >> $GITHUB_ENV
         echo "$HOME/theos/bin" >> $GITHUB_PATH
+
+    # 👉 THÊM BƯỚC NÀY ĐỂ CÀI ĐẶT LDID TRƯỚC KHI BUILD
+    - name: Install ldid
+      run: |
+        brew install ldid
 
     - name: Build Tweak Package
       run: |
