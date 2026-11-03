@@ -1,0 +1,8 @@
+Package: com.ztrongz.mapv1bypass
+Name: MapV1Bypass
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphone-arm64
+Maintainer: ZTrongz
+Author: ZTrongz
+Section: Tweaks
