@@ -19,7 +19,7 @@ _build:
         echo "THEOS=$HOME/theos" >> $GITHUB_ENV
         echo "$HOME/theos/bin" >> $GITHUB_PATH
 
-    # 👉 THÊM BƯỚC NÀY ĐỂ CÀI ĐẶT LDID TRƯỚC KHI BUILD
+    #  THÊM BƯỚC NÀY ĐỂ CÀI ĐẶT LDID TRƯỚC KHI BUILD
     - name: Install ldid
       run: |
         brew install ldid
